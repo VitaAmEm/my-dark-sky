@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>My Dark Sky</title>
+<meta name="description" content="A small, honest weather instrument - current conditions, a 5-day outlook, and your own recorded history." />
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,wght@0,400;0,600;1,400;1,500&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          ink: "#0B1220",
+          panel: "#141B2E",
+          panel2: "#1B2438",
+          fog: "#94A3B8",
+          paper: "#F1F5F9",
+          aurora: "#5EEAD4",
+          ember: "#F5A25D",
+        },
+        fontFamily: {
+          serif: ["Newsreader", "serif"],
+          mono: ["JetBrains Mono", "monospace"],
+        },
+      },
+    },
+  };
+</script>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/custom.css') }}">
+</head>
+<body class="bg-ink text-paper font-mono min-h-screen antialiased">
+
+<div class="max-w-3xl mx-auto px-5 py-8 md:py-12">
+
+  <!-- Header / search -->
+  <header class="flex flex-col gap-4 mb-10">
+    <div class="flex items-center justify-between">
+      <h1 class="font-serif italic text-2xl md:text-3xl text-paper tracking-tight">My Dark Sky</h1>
+      <button id="unitsToggle" class="text-xs tracking-widest border border-fog/30 rounded-full px-3 py-1 text-fog hover:text-aurora hover:border-aurora/50 transition-colors">
+        °F
+      </button>
+    </div>
+
+    <div class="relative">
+      <div class="flex items-center gap-2 bg-panel border border-white/5 rounded-xl px-4 py-3 focus-within:border-aurora/40 transition-colors">
+        <svg class="w-4 h-4 text-fog shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M17 10a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+        <input id="searchInput" type="text" placeholder="Search a place..." autocomplete="off"
+          class="bg-transparent flex-1 outline-none text-sm placeholder:text-fog/60" />
+        <button id="locateBtn" title="Use current location" class="text-fog hover:text-aurora transition-colors shrink-0">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        </button>
+      </div>
+      <ul id="searchResults" class="hidden absolute z-10 mt-2 w-full bg-panel border border-white/10 rounded-xl overflow-hidden shadow-2xl"></ul>
+    </div>
+  </header>
+
+  <!-- Status / error line -->
+  <p id="statusLine" class="text-xs text-fog mb-6"></p>
+
+  <main id="weatherApp" class="hidden">
+
+    <!-- Instrument panel: hero -->
+    <section class="mb-10">
+      <p id="placeName" class="text-sm text-fog mb-1"></p>
+      <div class="flex items-end gap-4">
+        <span id="currentTemp" class="text-7xl md:text-8xl font-semibold tabular-nums leading-none"></span>
+        <span id="currentUnit" class="text-2xl text-fog mb-2"></span>
+      </div>
+      <p id="observationLine" class="font-serif italic text-lg md:text-xl text-paper/90 mt-3"></p>
+      <p id="feelsLikeLine" class="text-sm text-fog mt-1"></p>
+
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mt-6 text-xs">
+        <div class="bg-panel rounded-lg px-3 py-2"><span class="text-fog block mb-1">Humidity</span><span id="statHumidity" class="text-paper"></span></div>
+        <div class="bg-panel rounded-lg px-3 py-2"><span class="text-fog block mb-1">Wind</span><span id="statWind" class="text-paper"></span></div>
+        <div class="bg-panel rounded-lg px-3 py-2"><span class="text-fog block mb-1">Pressure</span><span id="statPressure" class="text-paper"></span></div>
+        <div class="bg-panel rounded-lg px-3 py-2"><span class="text-fog block mb-1">Visibility</span><span id="statVisibility" class="text-paper"></span></div>
+      </div>
+    </section>
+
+    <!-- Signature element: precipitation sparkline -->
+    <section class="mb-10">
+      <p class="text-xs text-fog mb-2 uppercase tracking-widest">Precipitation chance · next 24h · 3-hour steps</p>
+      <div class="bg-panel rounded-xl p-4">
+        <svg id="precipChart" viewBox="0 0 600 120" class="w-full h-28"></svg>
+      </div>
+    </section>
+
+    <!-- Hourly strip -->
+    <section class="mb-10">
+      <p class="text-xs text-fog mb-2 uppercase tracking-widest">Next 24 hours</p>
+      <div id="hourlyStrip" class="flex gap-4 overflow-x-auto pb-2 -mx-1 px-1"></div>
+    </section>
+
+    <!-- Daily forecast -->
+    <section class="mb-10">
+      <p class="text-xs text-fog mb-2 uppercase tracking-widest">5-day outlook</p>
+      <div id="dailyList" class="divide-y divide-white/5"></div>
+    </section>
+
+    <!-- Date explorer -->
+    <section class="mb-10">
+      <p class="text-xs text-fog mb-2 uppercase tracking-widest">Forecast on a given date</p>
+      <div class="bg-panel rounded-xl p-4 border border-white/5">
+        <div class="flex flex-col sm:flex-row gap-3 sm:items-center">
+          <label for="datePicker" class="text-xs text-fog uppercase tracking-widest">Pick a date</label>
+          <input id="datePicker" type="date" class="bg-panel2 border border-white/10 rounded-lg px-3 py-2 text-sm outline-none focus:border-aurora/50" />
+          <button id="dateLookupBtn" class="text-xs tracking-widest border border-fog/30 rounded-full px-3 py-2 text-fog hover:text-aurora hover:border-aurora/50 transition-colors">Show</button>
+        </div>
+        <div id="dateResult" class="mt-3 text-sm text-fog"></div>
+      </div>
+    </section>
+
+    <!-- Time machine -->
+    <section>
+      <div class="flex items-center justify-between mb-2">
+        <p class="text-xs text-fog uppercase tracking-widest">Time machine · your recorded history for this place</p>
+      </div>
+      <p class="text-xs text-fog/70 mb-3">We don't have a paid historical-data plan, so instead of faking the past, this logs every real check-in for this location as you make it.</p>
+      <div id="historyList" class="space-y-2 text-sm"></div>
+    </section>
+
+  </main>
+</div>
+
+<script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
