@@ -61,6 +61,11 @@ right.
 curl "http://localhost:8080/api/weather?lat=42.36&lon=-71.06&units=imperial&name=Boston"
 ```
 
+## Live Deployment
+
+- URL: https://my-dark-sky-9tmi.onrender.com
+- Submission file: [my_dark_sky_url.txt](my_dark_sky_url.txt)
+
 ## Deploy to Render
 
 1. Push this repo to GitHub.
@@ -78,3 +83,15 @@ Create a `.env` file locally with:
 ```env
 OPENWEATHER_API_KEY=your_api_key_here
 ```
+
+## Requirement Checklist
+
+- Python + Flask app: yes
+- Cloud hosted: yes (Render)
+- Location by search: yes
+- Location by current geolocation: yes
+- Today's weather: yes
+- Future forecast: yes
+- Forecast on selected date: yes
+- Time machine/history view: yes
+- 5-minute cache: yes (SQLite)
