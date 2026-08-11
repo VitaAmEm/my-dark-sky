@@ -1,12 +1,3 @@
-"""
-app.py - My Dark Sky
-
-A small Flask backend that reimplements the core of the original Dark Sky
-website on top of OpenWeatherMap's free tier: current conditions, a 5-day
-forecast, location search/geolocation, a 5-minute cache, and a "Time
-Machine" built from our own recorded history (see cache.py for why).
-"""
-
 import os
 from collections import Counter, defaultdict
 from datetime import datetime, timezone
@@ -21,9 +12,6 @@ from weather_client import WeatherAPIError
 load_dotenv()
 
 app = Flask(__name__)
-
-# How much the temperature has to move (in the request's own units) before
-# we consider it a "meaningfully new" reading worth logging to history.
 HISTORY_TEMP_CHANGE_THRESHOLD = 1.0
 
 
@@ -136,14 +124,6 @@ def api_date_weather():
 
 
 def _maybe_record_history(lat, lon, units, place_name, current_raw):
-    """
-    Only append a new history row if conditions actually changed since the
-    last recorded snapshot for this location. Without this check, every
-    fresh (non-cached) request - even ones minutes apart with identical
-    weather - would clutter the Time Machine with duplicate entries. This
-    way it reads like a log of real weather changes, not a log of API
-    calls.
-    """
     condition = current_raw["weather"][0]["main"] if current_raw.get("weather") else "Unknown"
     icon = current_raw["weather"][0]["icon"] if current_raw.get("weather") else ""
     temperature = current_raw["main"]["temp"]
@@ -167,7 +147,6 @@ def _maybe_record_history(lat, lon, units, place_name, current_raw):
 
 
 def _build_weather_payload(current_raw, forecast_raw, place_name, units):
-    """Reshape OpenWeatherMap's raw JSON into the compact shape our frontend wants."""
     wind_deg = current_raw.get("wind", {}).get("deg")
     current = {
         "temperature": round(current_raw["main"]["temp"]),
@@ -208,17 +187,6 @@ def _format_forecast_block(block):
 
 
 def _bucket_forecast_by_day(blocks):
-    """
-    The free forecast endpoint gives 3-hour blocks for 5 days, not clean
-    daily summaries. Group them by calendar date and derive a min/max/
-    representative-condition summary per day.
-
-    The representative condition is whichever condition occurs most often
-    across that day's blocks (ties broken by whichever appears first) -
-    rather than just whatever happened to be forecast at noon, which can
-    be misleading if, say, only one of eight 3-hour blocks is "Rain" but
-    it happens to land at midday.
-    """
     days = defaultdict(list)
     for block in blocks:
         date_str = block["dt_txt"].split(" ")[0]

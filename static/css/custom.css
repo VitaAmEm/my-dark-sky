@@ -1,5 +1,3 @@
-/* A few things Tailwind's utility classes can't express cleanly */
-
 @keyframes glow-pulse {
   0%, 100% { filter: drop-shadow(0 0 2px rgba(94, 234, 212, 0.35)); }
   50%      { filter: drop-shadow(0 0 8px rgba(94, 234, 212, 0.7)); }
@@ -9,20 +7,12 @@
   animation: glow-pulse 3.5s ease-in-out infinite;
 }
 
-/* Keyboard-focus ring matched to the app's own palette, instead of the
-   browser's default blue outline clashing with the navy theme. This is
-   the visual half of the search combobox's keyboard navigation - the
-   ARIA attributes in app.js make it work for screen readers, this makes
-   it visible for sighted keyboard users too. */
 :focus-visible {
   outline: 2px solid #5EEAD4;
   outline-offset: 2px;
   border-radius: 4px;
 }
 
-/* A slow, static "atmosphere" behind the page - two soft, off-center
-   glows instead of a flat navy fill. Subtle on purpose: it should read
-   as depth, not as decoration competing with the actual weather data. */
 body {
   background:
     radial-gradient(circle at 20% -10%, rgba(94, 234, 212, 0.06), transparent 40%),
@@ -31,10 +21,6 @@ body {
   background-attachment: fixed;
 }
 
-/* Slim, unobtrusive horizontal scrollbar for the hourly strip.
-   The two rules below cover Chrome/Safari/Edge (::-webkit-*) and
-   Firefox (scrollbar-width/scrollbar-color) separately, since they
-   don't share a common CSS API for this yet. */
 #hourlyStrip::-webkit-scrollbar {
   height: 4px;
 }

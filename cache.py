@@ -1,22 +1,3 @@
-"""
-cache.py
-
-Two jobs, both backed by the same SQLite database via SQLAlchemy:
-
-1. CacheEntry: a short-lived cache (5 minutes) so repeated requests for the
-   same location don't burn through the OpenWeatherMap quota. This is the
-   "cache system" required by the spec.
-
-2. HistorySnapshot: an append-only log of every *meaningfully new* lookup
-   we make (see get_latest_snapshot / the dedup check in app.py).
-   OpenWeatherMap's free tier doesn't include real historical data, so
-   instead of faking it, we record what we actually observed each time
-   conditions genuinely change. Over time this becomes a genuine (if
-   incomplete) "time machine" for locations you've looked up before -
-   an honest substitute rather than a fabricated one, and it reads like
-   a log of real weather changes rather than a log of API calls.
-"""
-
 import json
 import os
 from datetime import datetime, timedelta, timezone
@@ -36,7 +17,6 @@ class Base(DeclarativeBase):
 
 
 def _location_key(lat, lon, units):
-    """Round coordinates so nearby requests for 'the same place' share a cache row."""
     return f"{round(float(lat), 3)}:{round(float(lon), 3)}:{units}"
 
 
@@ -67,7 +47,6 @@ Base.metadata.create_all(engine)
 
 
 def get_cached_weather(lat, lon, units):
-    """Return a cached payload (dict) if we have one younger than CACHE_TTL, else None."""
     key = _location_key(lat, lon, units)
     session = Session()
     try:
@@ -83,7 +62,6 @@ def get_cached_weather(lat, lon, units):
 
 
 def store_weather_in_cache(lat, lon, units, payload):
-    """Upsert the cache row for this location."""
     key = _location_key(lat, lon, units)
     session = Session()
     try:
@@ -101,11 +79,6 @@ def store_weather_in_cache(lat, lon, units, payload):
 
 
 def get_latest_snapshot(lat, lon, units):
-    """
-    Return the most recently recorded history snapshot for this location,
-    as a dict, or None if we've never recorded one. Used to decide whether
-    a fresh fetch is worth logging as a new history entry.
-    """
     key = _location_key(lat, lon, units)
     session = Session()
     try:
@@ -126,7 +99,6 @@ def get_latest_snapshot(lat, lon, units):
 
 
 def record_history_snapshot(lat, lon, units, place_name, temperature, feels_like, condition, icon):
-    """Append one row to the permanent history log (used by the Time Machine view)."""
     key = _location_key(lat, lon, units)
     session = Session()
     try:
@@ -147,7 +119,6 @@ def record_history_snapshot(lat, lon, units, place_name, temperature, feels_like
 
 
 def get_history(lat, lon, units, limit=50):
-    """Return past recorded snapshots for this location, most recent first."""
     key = _location_key(lat, lon, units)
     session = Session()
     try:

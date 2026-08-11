@@ -1,13 +1,6 @@
-/**
- * app.js - My Dark Sky frontend
- *
- * No framework, no build step: fetch() + direct DOM updates. Keeps the
- * whole client-side story in one readable file for a project this size.
- */
-
 const state = {
-  units: "imperial", // "imperial" (°F, mph) or "metric" (°C, m/s)
-  location: null, // { name, lat, lon }
+  units: "imperial",
+  location: null,
   searchTimer: null,
   activeResultIndex: -1,
   lastSearchResults: [],
@@ -15,7 +8,6 @@ const state = {
 
 const el = (id) => document.getElementById(id);
 
-// --- Small icon set, drawn to match our own palette instead of pulling OWM's icon images ---
 const ICONS = {
   Clear: `<circle cx="12" cy="12" r="5"/><g stroke-linecap="round"><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.2" y1="4.2" x2="5.6" y2="5.6"/><line x1="18.4" y1="18.4" x2="19.8" y2="19.8"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.2" y1="19.8" x2="5.6" y2="18.4"/><line x1="18.4" y1="5.6" x2="19.8" y2="4.2"/></g>`,
   Clouds: `<path d="M17 18a4 4 0 000-8 5.5 5.5 0 00-10.7 1.7A3.5 3.5 0 007.5 18h9.5z"/>`,
@@ -34,7 +26,6 @@ function iconSvg(condition, extraClass = "w-6 h-6") {
   return `<svg class="${extraClass} text-aurora" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">${paths}</svg>`;
 }
 
-// --- Units ---
 function unitSuffix() {
   return state.units === "imperial" ? "°F" : "°C";
 }
@@ -61,7 +52,6 @@ el("dateLookupBtn").addEventListener("click", () => {
   loadDateWeather(dateValue);
 });
 
-// --- Search ---
 el("searchInput").addEventListener("input", (event) => {
   clearTimeout(state.searchTimer);
   const query = event.target.value.trim();
@@ -172,7 +162,6 @@ el("searchInput").addEventListener("keydown", (event) => {
   }
 });
 
-// --- Geolocation ("current location") ---
 el("locateBtn").addEventListener("click", () => {
   if (!navigator.geolocation) {
     setStatus("Geolocation isn't available in this browser.");
@@ -194,7 +183,6 @@ el("locateBtn").addEventListener("click", () => {
   );
 });
 
-// --- Fetch + render weather ---
 function setStatus(message) {
   el("statusLine").textContent = message;
 }
@@ -328,7 +316,6 @@ function drawPrecipChart(hourly) {
   `;
 }
 
-// --- Time machine (our own recorded history for this location) ---
 async function loadHistory(location) {
   try {
     const response = await fetch(`/api/history?lat=${location.lat}&lon=${location.lon}&units=${state.units}`);
@@ -405,7 +392,6 @@ function renderDateWeather(payload) {
   el("dateResult").innerHTML = `${forecastLine}${historyLine}`;
 }
 
-// --- Boot: try geolocation silently, otherwise wait for the user to search ---
 (function boot() {
   if (navigator.geolocation) {
     navigator.geolocation.getCurrentPosition(

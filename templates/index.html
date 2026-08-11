@@ -38,7 +38,6 @@
 
 <div class="max-w-3xl mx-auto px-5 py-8 md:py-12">
 
-  <!-- Header / search -->
   <header class="flex flex-col gap-4 mb-10">
     <div class="flex items-center justify-between">
       <h1 class="font-serif italic text-2xl md:text-3xl text-paper tracking-tight">My Dark Sky</h1>
@@ -60,12 +59,10 @@
     </div>
   </header>
 
-  <!-- Status / error line -->
   <p id="statusLine" class="text-xs text-fog mb-6"></p>
 
   <main id="weatherApp" class="hidden">
 
-    <!-- Instrument panel: hero -->
     <section class="mb-10">
       <p id="placeName" class="text-sm text-fog mb-1"></p>
       <div class="flex items-end gap-4">
@@ -83,7 +80,6 @@
       </div>
     </section>
 
-    <!-- Signature element: precipitation sparkline -->
     <section class="mb-10">
       <p class="text-xs text-fog mb-2 uppercase tracking-widest">Precipitation chance · next 24h · 3-hour steps</p>
       <div class="bg-panel rounded-xl p-4">
@@ -91,19 +87,16 @@
       </div>
     </section>
 
-    <!-- Hourly strip -->
     <section class="mb-10">
       <p class="text-xs text-fog mb-2 uppercase tracking-widest">Next 24 hours</p>
       <div id="hourlyStrip" class="flex gap-4 overflow-x-auto pb-2 -mx-1 px-1"></div>
     </section>
 
-    <!-- Daily forecast -->
     <section class="mb-10">
       <p class="text-xs text-fog mb-2 uppercase tracking-widest">5-day outlook</p>
       <div id="dailyList" class="divide-y divide-white/5"></div>
     </section>
 
-    <!-- Date explorer -->
     <section class="mb-10">
       <p class="text-xs text-fog mb-2 uppercase tracking-widest">Forecast on a given date</p>
       <div class="bg-panel rounded-xl p-4 border border-white/5">
@@ -116,7 +109,6 @@
       </div>
     </section>
 
-    <!-- Time machine -->
     <section>
       <div class="flex items-center justify-between mb-2">
         <p class="text-xs text-fog uppercase tracking-widest">Time machine · your recorded history for this place</p>
