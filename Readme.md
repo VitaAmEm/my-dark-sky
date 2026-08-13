@@ -54,11 +54,18 @@ python app.py
 ```
 
 Open `http://localhost:8080`. Allow location access or search for a
-place - arrow keys and Enter work in the results list. Toggle °F/°C top
-right.
+place - arrow keys and Enter work in the results list. Toggle °F/°C and
+choose km/h, m/s, or knots for wind speed in the top-right controls.
+
+The entry point also accepts exactly two positional arguments and prints
+them, which is useful for command-line checks:
 
 ```bash
-curl "http://localhost:8080/api/weather?lat=42.36&lon=-71.06&units=imperial&name=Boston"
+python app.py Firstname Lastname
+```
+
+```bash
+curl "http://localhost:8080/api/weather?lat=42.36&lon=-71.06&units=imperial&wind_unit=kmh&name=Boston"
 ```
 
 ## Live Deployment

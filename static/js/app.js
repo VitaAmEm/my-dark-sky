@@ -1,5 +1,6 @@
 const state = {
   units: "imperial",
+  windUnit: "kmh",
   location: null,
   searchTimer: null,
   activeResultIndex: -1,
@@ -30,12 +31,17 @@ function unitSuffix() {
   return state.units === "imperial" ? "°F" : "°C";
 }
 function speedSuffix() {
-  return state.units === "imperial" ? "mph" : "m/s";
+  return { kmh: "km/h", ms: "m/s", kn: "kn" }[state.windUnit];
 }
 
 el("unitsToggle").addEventListener("click", () => {
   state.units = state.units === "imperial" ? "metric" : "imperial";
   el("unitsToggle").textContent = state.units === "imperial" ? "°F" : "°C";
+  if (state.location) loadWeather(state.location);
+});
+
+el("windUnitSelect").addEventListener("change", (event) => {
+  state.windUnit = event.target.value;
   if (state.location) loadWeather(state.location);
 });
 
@@ -192,7 +198,7 @@ async function loadWeather(location) {
   setStatus(`Loading weather for ${location.name}...`);
   el("searchInput").value = location.name;
 
-  const url = `/api/weather?lat=${location.lat}&lon=${location.lon}&units=${state.units}&name=${encodeURIComponent(location.name)}`;
+  const url = `/api/weather?lat=${location.lat}&lon=${location.lon}&units=${state.units}&wind_unit=${state.windUnit}&name=${encodeURIComponent(location.name)}`;
   try {
     const response = await fetch(url);
     if (!response.ok) {

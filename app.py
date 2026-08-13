@@ -1,3 +1,4 @@
+import argparse
 import os
 from collections import Counter, defaultdict
 from datetime import datetime, timezone
@@ -13,6 +14,43 @@ load_dotenv()
 
 app = Flask(__name__)
 HISTORY_TEMP_CHANGE_THRESHOLD = 1.0
+SUPPORTED_TEMPERATURE_UNITS = ("imperial", "metric")
+SUPPORTED_WIND_UNITS = ("kmh", "ms", "kn")
+
+
+def _parse_command_line_args():
+    parser = argparse.ArgumentParser(description="Run the weather dashboard or print a name.")
+    parser.add_argument("firstname", nargs="?")
+    parser.add_argument("lastname", nargs="?")
+    args = parser.parse_args()
+    if (args.firstname is None) != (args.lastname is None):
+        parser.error("provide both a firstname and a lastname")
+    return args.firstname, args.lastname
+
+
+def _run_from_command_line():
+    firstname, lastname = _parse_command_line_args()
+    if firstname is not None:
+        print(f"{firstname} {lastname}")
+        return
+
+    port = int(os.environ.get("PORT", 8080))
+    app.run(host="0.0.0.0", port=port, debug=os.environ.get("FLASK_DEBUG") == "1")
+
+
+def _coordinates_from_request():
+    lat = request.args.get("lat")
+    lon = request.args.get("lon")
+    if lat is None or lon is None:
+        return None, None, ("lat and lon query parameters are required", 400)
+    try:
+        latitude = float(lat)
+        longitude = float(lon)
+    except ValueError:
+        return None, None, ("lat and lon must be valid numbers", 400)
+    if not -90 <= latitude <= 90 or not -180 <= longitude <= 180:
+        return None, None, ("lat or lon is outside the valid range", 400)
+    return lat, lon, None
 
 
 @app.route("/")
@@ -32,10 +70,9 @@ def api_search():
 
 @app.route("/api/reverse")
 def api_reverse():
-    lat = request.args.get("lat")
-    lon = request.args.get("lon")
-    if lat is None or lon is None:
-        return jsonify({"error": "lat and lon are required"}), 400
+    lat, lon, error = _coordinates_from_request()
+    if error:
+        return jsonify({"error": error[0]}), error[1]
     try:
         place = weather_client.reverse_geocode(lat, lon)
     except WeatherAPIError as err:
@@ -45,17 +82,20 @@ def api_reverse():
 
 @app.route("/api/weather")
 def api_weather():
-    lat = request.args.get("lat")
-    lon = request.args.get("lon")
+    lat, lon, error = _coordinates_from_request()
     units = request.args.get("units", "imperial")
+    wind_unit = request.args.get("wind_unit", "kmh")
     place_name = request.args.get("name", "Selected location")
 
-    if lat is None or lon is None:
-        return jsonify({"error": "lat and lon query parameters are required"}), 400
-    if units not in ("imperial", "metric"):
+    if error:
+        return jsonify({"error": error[0]}), error[1]
+    if units not in SUPPORTED_TEMPERATURE_UNITS:
         return jsonify({"error": "units must be 'imperial' or 'metric'"}), 400
+    if wind_unit not in SUPPORTED_WIND_UNITS:
+        return jsonify({"error": "wind_unit must be 'kmh', 'ms', or 'kn'"}), 400
 
-    cached = cache.get_cached_weather(lat, lon, units)
+    cache_units = f"{units}:{wind_unit}"
+    cached = cache.get_cached_weather(lat, lon, cache_units)
     if cached is not None:
         return jsonify({**cached, "from_cache": True})
 
@@ -65,8 +105,8 @@ def api_weather():
     except WeatherAPIError as err:
         return jsonify({"error": str(err)}), 502
 
-    payload = _build_weather_payload(current_raw, forecast_raw, place_name, units)
-    cache.store_weather_in_cache(lat, lon, units, payload)
+    payload = _build_weather_payload(current_raw, forecast_raw, place_name, units, wind_unit)
+    cache.store_weather_in_cache(lat, lon, cache_units, payload)
     _maybe_record_history(lat, lon, units, place_name, current_raw)
 
     return jsonify({**payload, "from_cache": False})
@@ -74,24 +114,26 @@ def api_weather():
 
 @app.route("/api/history")
 def api_history():
-    lat = request.args.get("lat")
-    lon = request.args.get("lon")
+    lat, lon, error = _coordinates_from_request()
     units = request.args.get("units", "imperial")
-    if lat is None or lon is None:
-        return jsonify({"error": "lat and lon query parameters are required"}), 400
+    if error:
+        return jsonify({"error": error[0]}), error[1]
+    if units not in SUPPORTED_TEMPERATURE_UNITS:
+        return jsonify({"error": "units must be 'imperial' or 'metric'"}), 400
     return jsonify(cache.get_history(lat, lon, units))
 
 
 @app.route("/api/date-weather")
 def api_date_weather():
-    lat = request.args.get("lat")
-    lon = request.args.get("lon")
+    lat, lon, error = _coordinates_from_request()
     units = request.args.get("units", "imperial")
     date_str = request.args.get("date")
 
-    if lat is None or lon is None or date_str is None:
-        return jsonify({"error": "lat, lon, and date query parameters are required"}), 400
-    if units not in ("imperial", "metric"):
+    if error:
+        return jsonify({"error": error[0]}), error[1]
+    if date_str is None:
+        return jsonify({"error": "date query parameter is required"}), 400
+    if units not in SUPPORTED_TEMPERATURE_UNITS:
         return jsonify({"error": "units must be 'imperial' or 'metric'"}), 400
 
     try:
@@ -146,8 +188,9 @@ def _maybe_record_history(lat, lon, units, place_name, current_raw):
         )
 
 
-def _build_weather_payload(current_raw, forecast_raw, place_name, units):
+def _build_weather_payload(current_raw, forecast_raw, place_name, units, wind_unit):
     wind_deg = current_raw.get("wind", {}).get("deg")
+    raw_wind_speed = current_raw.get("wind", {}).get("speed", 0)
     current = {
         "temperature": round(current_raw["main"]["temp"]),
         "feels_like": round(current_raw["main"]["feels_like"]),
@@ -155,7 +198,7 @@ def _build_weather_payload(current_raw, forecast_raw, place_name, units):
         "high": round(current_raw["main"].get("temp_max", current_raw["main"]["temp"])),
         "humidity": current_raw["main"]["humidity"],
         "pressure": current_raw["main"]["pressure"],
-        "wind_speed": round(current_raw.get("wind", {}).get("speed", 0)),
+        "wind_speed": _convert_wind_speed(raw_wind_speed, units, wind_unit),
         "wind_direction": weather_client.degrees_to_compass(wind_deg),
         "visibility_meters": current_raw.get("visibility"),
         "condition": current_raw["weather"][0]["main"] if current_raw.get("weather") else "Unknown",
@@ -169,6 +212,7 @@ def _build_weather_payload(current_raw, forecast_raw, place_name, units):
     return {
         "place_name": place_name,
         "units": units,
+        "wind_unit": wind_unit,
         "fetched_at": datetime.now(timezone.utc).isoformat(),
         "current": current,
         "hourly": hourly,
@@ -184,6 +228,12 @@ def _format_forecast_block(block):
         "icon": block["weather"][0]["icon"] if block.get("weather") else "",
         "precipitation_probability": round(block.get("pop", 0) * 100),
     }
+
+
+def _convert_wind_speed(speed, temperature_units, wind_unit):
+    source_to_kmh = 1.609344 if temperature_units == "imperial" else 3.6
+    target_from_kmh = {"kmh": 1, "ms": 1 / 3.6, "kn": 1 / 1.852}
+    return round(float(speed) * source_to_kmh * target_from_kmh[wind_unit], 1)
 
 
 def _bucket_forecast_by_day(blocks):
@@ -219,5 +269,4 @@ def _bucket_forecast_by_day(blocks):
 
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 8080))
-    app.run(host="0.0.0.0", port=port, debug=os.environ.get("FLASK_DEBUG") == "1")
+    _run_from_command_line()

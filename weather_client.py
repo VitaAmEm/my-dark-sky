@@ -32,13 +32,13 @@ def _api_key():
 
 def _get(url, params):
     params = {**params, "appid": _api_key()}
-    is_last_attempt = lambda attempt: attempt == MAX_RETRIES
 
     for attempt in range(MAX_RETRIES + 1):
+        is_last_attempt = attempt == MAX_RETRIES
         try:
             response = requests.get(url, params=params, timeout=REQUEST_TIMEOUT_SECONDS)
         except requests.RequestException as err:
-            if is_last_attempt(attempt):
+            if is_last_attempt:
                 raise WeatherAPIError(
                     f"Could not reach OpenWeatherMap after {attempt + 1} attempt(s): {err}"
                 ) from err
@@ -51,7 +51,7 @@ def _get(url, params):
             raise WeatherAPIError("OpenWeatherMap rate limit exceeded (429 Too Many Requests).")
 
         if response.status_code >= 500:
-            if is_last_attempt(attempt):
+            if is_last_attempt:
                 raise WeatherAPIError(
                     f"OpenWeatherMap kept failing after {attempt + 1} attempts "
                     f"(last status: HTTP {response.status_code})."
@@ -62,7 +62,12 @@ def _get(url, params):
         if not response.ok:
             raise WeatherAPIError(f"OpenWeatherMap returned HTTP {response.status_code}: {response.text[:200]}")
 
-        return response.json()
+        try:
+            return response.json()
+        except ValueError as err:
+            raise WeatherAPIError("OpenWeatherMap returned invalid JSON.") from err
+
+    raise WeatherAPIError("OpenWeatherMap request ended without a response.")
 
 
 def search_locations(query, limit=5):

@@ -48,8 +48,7 @@ Base.metadata.create_all(engine)
 
 def get_cached_weather(lat, lon, units):
     key = _location_key(lat, lon, units)
-    session = Session()
-    try:
+    with Session() as session:
         entry = session.query(CacheEntry).filter_by(location_key=key).first()
         if entry is None:
             return None
@@ -57,14 +56,10 @@ def get_cached_weather(lat, lon, units):
         if age > CACHE_TTL:
             return None
         return json.loads(entry.payload_json)
-    finally:
-        session.close()
-
 
 def store_weather_in_cache(lat, lon, units, payload):
     key = _location_key(lat, lon, units)
-    session = Session()
-    try:
+    with Session() as session:
         entry = session.query(CacheEntry).filter_by(location_key=key).first()
         now = datetime.now(timezone.utc)
         if entry is None:
@@ -74,14 +69,11 @@ def store_weather_in_cache(lat, lon, units, payload):
             entry.payload_json = json.dumps(payload)
             entry.fetched_at = now
         session.commit()
-    finally:
-        session.close()
 
 
 def get_latest_snapshot(lat, lon, units):
     key = _location_key(lat, lon, units)
-    session = Session()
-    try:
+    with Session() as session:
         row = (
             session.query(HistorySnapshot)
             .filter_by(location_key=key)
@@ -94,14 +86,11 @@ def get_latest_snapshot(lat, lon, units):
             "temperature": row.temperature,
             "condition": row.condition,
         }
-    finally:
-        session.close()
 
 
 def record_history_snapshot(lat, lon, units, place_name, temperature, feels_like, condition, icon):
     key = _location_key(lat, lon, units)
-    session = Session()
-    try:
+    with Session() as session:
         snapshot = HistorySnapshot(
             location_key=key,
             place_name=place_name,
@@ -114,14 +103,11 @@ def record_history_snapshot(lat, lon, units, place_name, temperature, feels_like
         )
         session.add(snapshot)
         session.commit()
-    finally:
-        session.close()
 
 
 def get_history(lat, lon, units, limit=50):
     key = _location_key(lat, lon, units)
-    session = Session()
-    try:
+    with Session() as session:
         rows = (
             session.query(HistorySnapshot)
             .filter_by(location_key=key)
@@ -140,5 +126,3 @@ def get_history(lat, lon, units, limit=50):
             }
             for row in rows
         ]
-    finally:
-        session.close()

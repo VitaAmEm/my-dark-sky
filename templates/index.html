@@ -41,9 +41,17 @@
   <header class="flex flex-col gap-4 mb-10">
     <div class="flex items-center justify-between">
       <h1 class="font-serif italic text-2xl md:text-3xl text-paper tracking-tight">My Dark Sky</h1>
-      <button id="unitsToggle" class="text-xs tracking-widest border border-fog/30 rounded-full px-3 py-1 text-fog hover:text-aurora hover:border-aurora/50 transition-colors">
+      <div class="flex items-center gap-2">
+        <button id="unitsToggle" type="button" aria-label="Switch temperature units" class="text-xs tracking-widest border border-fog/30 rounded-full px-3 py-1 text-fog hover:text-aurora hover:border-aurora/50 transition-colors">
         °F
-      </button>
+        </button>
+        <label class="sr-only" for="windUnitSelect">Wind speed unit</label>
+        <select id="windUnitSelect" class="unit-select text-xs border border-fog/30 rounded-full px-2 py-1 text-fog bg-panel outline-none focus:border-aurora/50">
+          <option value="kmh">km/h</option>
+          <option value="ms">m/s</option>
+          <option value="kn">kn</option>
+        </select>
+      </div>
     </div>
 
     <div class="relative">

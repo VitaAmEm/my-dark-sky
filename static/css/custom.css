@@ -13,6 +13,11 @@
   border-radius: 4px;
 }
 
+.unit-select option {
+  background: #141B2E;
+  color: #F1F5F9;
+}
+
 body {
   background:
     radial-gradient(circle at 20% -10%, rgba(94, 234, 212, 0.06), transparent 40%),
