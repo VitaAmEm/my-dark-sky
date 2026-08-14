@@ -94,20 +94,24 @@ def api_weather():
     if wind_unit not in SUPPORTED_WIND_UNITS:
         return jsonify({"error": "wind_unit must be 'kmh', 'ms', 'mph', or 'kn'"}), 400
 
-    cache_units = f"{units}:{wind_unit}"
+    effective_units = _effective_temperature_units(units, wind_unit)
+    cache_units = f"{effective_units}:{wind_unit}"
     cached = cache.get_cached_weather(lat, lon, cache_units)
     if cached is not None:
         return jsonify({**cached, "from_cache": True})
 
     try:
-        current_raw = weather_client.get_current_weather(lat, lon, units)
-        forecast_raw = weather_client.get_forecast(lat, lon, units)
+        current_raw = weather_client.get_current_weather(lat, lon, effective_units)
+        forecast_raw = weather_client.get_forecast(lat, lon, effective_units)
     except WeatherAPIError as err:
         return jsonify({"error": str(err)}), 502
 
-    payload = _build_weather_payload(current_raw, forecast_raw, place_name, units, wind_unit)
+    uv_index = weather_client.get_uv_index(lat, lon)
+    payload = _build_weather_payload(
+        current_raw, forecast_raw, place_name, effective_units, wind_unit, uv_index
+    )
     cache.store_weather_in_cache(lat, lon, cache_units, payload)
-    _maybe_record_history(lat, lon, units, place_name, current_raw)
+    _maybe_record_history(lat, lon, effective_units, place_name, current_raw)
 
     return jsonify({**payload, "from_cache": False})
 
@@ -188,7 +192,7 @@ def _maybe_record_history(lat, lon, units, place_name, current_raw):
         )
 
 
-def _build_weather_payload(current_raw, forecast_raw, place_name, units, wind_unit):
+def _build_weather_payload(current_raw, forecast_raw, place_name, units, wind_unit, uv_index=None):
     wind_deg = current_raw.get("wind", {}).get("deg")
     raw_wind_speed = current_raw.get("wind", {}).get("speed", 0)
     current = {
@@ -197,10 +201,11 @@ def _build_weather_payload(current_raw, forecast_raw, place_name, units, wind_un
         "low": round(current_raw["main"].get("temp_min", current_raw["main"]["temp"])),
         "high": round(current_raw["main"].get("temp_max", current_raw["main"]["temp"])),
         "humidity": current_raw["main"]["humidity"],
-        "pressure": current_raw["main"]["pressure"],
+        "pressure": _convert_pressure(current_raw["main"]["pressure"], units),
         "wind_speed": _convert_wind_speed(raw_wind_speed, units, wind_unit),
         "wind_direction": weather_client.degrees_to_compass(wind_deg),
-        "visibility_meters": current_raw.get("visibility"),
+        "visibility": _convert_visibility(current_raw.get("visibility"), units),
+        "uv_index": uv_index,
         "condition": current_raw["weather"][0]["main"] if current_raw.get("weather") else "Unknown",
         "description": current_raw["weather"][0]["description"] if current_raw.get("weather") else "",
         "icon": current_raw["weather"][0]["icon"] if current_raw.get("weather") else "",
@@ -213,6 +218,8 @@ def _build_weather_payload(current_raw, forecast_raw, place_name, units, wind_un
         "place_name": place_name,
         "units": units,
         "wind_unit": wind_unit,
+        "pressure_unit": "inHg" if units == "imperial" else "hPa",
+        "visibility_unit": "mi" if units == "imperial" else "km",
         "fetched_at": datetime.now(timezone.utc).isoformat(),
         "current": current,
         "hourly": hourly,
@@ -234,6 +241,28 @@ def _convert_wind_speed(speed, temperature_units, wind_unit):
     source_to_kmh = 1.609344 if temperature_units == "imperial" else 3.6
     target_from_kmh = {"kmh": 1, "ms": 1 / 3.6, "mph": 1 / 1.609344, "kn": 1 / 1.852}
     return round(float(speed) * source_to_kmh * target_from_kmh[wind_unit], 1)
+
+
+def _effective_temperature_units(temperature_units, wind_unit):
+    if wind_unit == "mph":
+        return "imperial"
+    if wind_unit in ("kmh", "ms"):
+        return "metric"
+    return temperature_units
+
+
+def _convert_pressure(pressure_hpa, temperature_units):
+    if temperature_units == "imperial":
+        return round(float(pressure_hpa) * 0.0295299833, 2)
+    return round(float(pressure_hpa), 1)
+
+
+def _convert_visibility(visibility_meters, temperature_units):
+    if visibility_meters is None:
+        return None
+    if temperature_units == "imperial":
+        return round(float(visibility_meters) / 1609.344, 1)
+    return round(float(visibility_meters) / 1000, 1)
 
 
 def _bucket_forecast_by_day(blocks):
