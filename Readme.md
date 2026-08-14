@@ -58,9 +58,7 @@ place - arrow keys and Enter work in the results list. Toggle °F/°C and
 choose km/h, m/s, mph, or knots for wind speed in the top-right controls.
 Choosing mph selects the US profile (°F, inHg, miles); choosing km/h or m/s
 selects the European profile (°C, hPa, kilometers). Knots changes only wind,
-so the temperature toggle remains in control of the other fields. UV risk is
-shown when the OpenWeather One Call API is available; its level follows the
-global 0-2 low, 3-5 moderate, 6-7 high, 8-10 very high, and 11+ extreme scale.
+so the temperature toggle remains in control of the other fields.
 
 The entry point also accepts exactly two positional arguments and prints
 them, which is useful for command-line checks:

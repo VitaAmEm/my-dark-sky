@@ -106,9 +106,8 @@ def api_weather():
     except WeatherAPIError as err:
         return jsonify({"error": str(err)}), 502
 
-    uv_index = weather_client.get_uv_index(lat, lon)
     payload = _build_weather_payload(
-        current_raw, forecast_raw, place_name, effective_units, wind_unit, uv_index
+        current_raw, forecast_raw, place_name, effective_units, wind_unit
     )
     cache.store_weather_in_cache(lat, lon, cache_units, payload)
     _maybe_record_history(lat, lon, effective_units, place_name, current_raw)
@@ -192,7 +191,7 @@ def _maybe_record_history(lat, lon, units, place_name, current_raw):
         )
 
 
-def _build_weather_payload(current_raw, forecast_raw, place_name, units, wind_unit, uv_index=None):
+def _build_weather_payload(current_raw, forecast_raw, place_name, units, wind_unit):
     wind_deg = current_raw.get("wind", {}).get("deg")
     raw_wind_speed = current_raw.get("wind", {}).get("speed", 0)
     current = {
@@ -205,7 +204,6 @@ def _build_weather_payload(current_raw, forecast_raw, place_name, units, wind_un
         "wind_speed": _convert_wind_speed(raw_wind_speed, units, wind_unit),
         "wind_direction": weather_client.degrees_to_compass(wind_deg),
         "visibility": _convert_visibility(current_raw.get("visibility"), units),
-        "uv_index": uv_index,
         "condition": current_raw["weather"][0]["main"] if current_raw.get("weather") else "Unknown",
         "description": current_raw["weather"][0]["description"] if current_raw.get("weather") else "",
         "icon": current_raw["weather"][0]["icon"] if current_raw.get("weather") else "",

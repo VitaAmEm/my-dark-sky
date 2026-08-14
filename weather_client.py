@@ -5,7 +5,6 @@ import requests
 
 GEO_BASE_URL = "https://api.openweathermap.org/geo/1.0"
 DATA_BASE_URL = "https://api.openweathermap.org/data/2.5"
-ONE_CALL_BASE_URL = "https://api.openweathermap.org/data/3.0"
 REQUEST_TIMEOUT_SECONDS = float(os.environ.get("WEATHER_REQUEST_TIMEOUT", 8))
 
 MAX_RETRIES = 2
@@ -101,22 +100,6 @@ def get_current_weather(lat, lon, units="imperial"):
 
 def get_forecast(lat, lon, units="imperial"):
     return _get(f"{DATA_BASE_URL}/forecast", {"lat": lat, "lon": lon, "units": units})
-
-
-def get_uv_index(lat, lon):
-    try:
-        data = _get(
-            f"{ONE_CALL_BASE_URL}/onecall",
-            {
-                "lat": lat,
-                "lon": lon,
-                "exclude": "minutely,hourly,daily,alerts",
-                "units": "metric",
-            },
-        )
-    except WeatherAPIError:
-        return None
-    return data.get("current", {}).get("uvi")
 
 
 def degrees_to_compass(degrees):

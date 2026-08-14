@@ -40,15 +40,6 @@ function visibilitySuffix() {
   return state.units === "imperial" ? "mi" : "km";
 }
 
-function uvRisk(index) {
-  if (index == null) return { label: "Unavailable", explanation: "UV data is not available for this location." };
-  if (index < 3) return { label: "Low risk", explanation: "Minimal risk for most people." };
-  if (index < 6) return { label: "Moderate risk", explanation: "Unprotected skin can burn; protection is recommended." };
-  if (index < 8) return { label: "High risk", explanation: "Unprotected skin can burn quickly; protection is important." };
-  if (index < 11) return { label: "Very high risk", explanation: "Skin and eye damage can happen quickly; avoid midday sun and use strong protection." };
-  return { label: "Extreme risk", explanation: "Unprotected skin can burn rapidly; limit exposure to reduce long-term skin-cancer risk." };
-}
-
 el("unitsToggle").addEventListener("click", () => {
   state.units = state.units === "imperial" ? "metric" : "imperial";
   if (state.windUnit !== "kn") {
@@ -255,11 +246,6 @@ function renderWeather(data) {
   el("statVisibility").textContent = data.current.visibility != null
     ? `${data.current.visibility.toFixed(1)} ${visibilitySuffix()}`
     : "—";
-  const uv = uvRisk(data.current.uv_index);
-  el("statUv").textContent = data.current.uv_index != null
-    ? `${Number(data.current.uv_index).toFixed(1)} · ${uv.label}`
-    : uv.label;
-  el("uvExplanation").textContent = uv.explanation;
 
   renderHourly(data.hourly);
   renderDaily(data.daily);
