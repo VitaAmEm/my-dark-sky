@@ -31,7 +31,7 @@ function unitSuffix() {
   return state.units === "imperial" ? "°F" : "°C";
 }
 function speedSuffix() {
-  return { kmh: "km/h", ms: "m/s", kn: "kn" }[state.windUnit];
+  return { kmh: "km/h", ms: "m/s", mph: "mph", kn: "kn" }[state.windUnit];
 }
 
 el("unitsToggle").addEventListener("click", () => {

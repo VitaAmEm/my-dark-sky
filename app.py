@@ -15,7 +15,7 @@ load_dotenv()
 app = Flask(__name__)
 HISTORY_TEMP_CHANGE_THRESHOLD = 1.0
 SUPPORTED_TEMPERATURE_UNITS = ("imperial", "metric")
-SUPPORTED_WIND_UNITS = ("kmh", "ms", "kn")
+SUPPORTED_WIND_UNITS = ("kmh", "ms", "mph", "kn")
 
 
 def _parse_command_line_args():
@@ -92,7 +92,7 @@ def api_weather():
     if units not in SUPPORTED_TEMPERATURE_UNITS:
         return jsonify({"error": "units must be 'imperial' or 'metric'"}), 400
     if wind_unit not in SUPPORTED_WIND_UNITS:
-        return jsonify({"error": "wind_unit must be 'kmh', 'ms', or 'kn'"}), 400
+        return jsonify({"error": "wind_unit must be 'kmh', 'ms', 'mph', or 'kn'"}), 400
 
     cache_units = f"{units}:{wind_unit}"
     cached = cache.get_cached_weather(lat, lon, cache_units)
@@ -232,7 +232,7 @@ def _format_forecast_block(block):
 
 def _convert_wind_speed(speed, temperature_units, wind_unit):
     source_to_kmh = 1.609344 if temperature_units == "imperial" else 3.6
-    target_from_kmh = {"kmh": 1, "ms": 1 / 3.6, "kn": 1 / 1.852}
+    target_from_kmh = {"kmh": 1, "ms": 1 / 3.6, "mph": 1 / 1.609344, "kn": 1 / 1.852}
     return round(float(speed) * source_to_kmh * target_from_kmh[wind_unit], 1)
 
 

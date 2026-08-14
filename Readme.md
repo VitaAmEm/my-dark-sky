@@ -55,7 +55,7 @@ python app.py
 
 Open `http://localhost:8080`. Allow location access or search for a
 place - arrow keys and Enter work in the results list. Toggle °F/°C and
-choose km/h, m/s, or knots for wind speed in the top-right controls.
+choose km/h, m/s, mph, or knots for wind speed in the top-right controls.
 
 The entry point also accepts exactly two positional arguments and prints
 them, which is useful for command-line checks:
